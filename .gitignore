@@ -1,0 +1,73 @@
+# Build Maven
+target/
+*.class
+*.jar
+*.war
+*.ear
+
+# Maven wrapper/cache local
+.mvn/timing.properties
+.mvn/wrapper/maven-wrapper.jar
+
+# Logs
+logs/
+*.log
+hs_err_pid*
+replay_pid*
+
+# Env / secrets locais
+.env
+.env.*
+!.env.example
+
+# Spring configs locais/sensíveis
+application-local.yml
+application-local.yaml
+application-dev-local.yml
+application-dev-local.yaml
+src/main/resources/application-local.yml
+src/main/resources/application-local.yaml
+
+# Banco/arquivos locais
+*.db
+*.sqlite
+*.sqlite3
+*.h2.db
+
+# Uploads/temp/runtime
+tmp/
+temp/
+uploads/
+
+# IntelliJ IDEA
+.idea/
+*.iws
+*.iml
+*.ipr
+
+# Eclipse / STS
+.apt_generated/
+.classpath
+.factorypath
+.project
+.settings/
+.springBeans
+.sts4-cache/
+
+# NetBeans
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+build/
+
+# VS Code
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Ferramentas pessoais/IA
+.openclaude-profile.json
