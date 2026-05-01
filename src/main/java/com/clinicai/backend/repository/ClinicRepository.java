@@ -10,6 +10,4 @@ public interface ClinicRepository extends JpaRepository<Clinic, UUID> {
     Optional<Clinic> findByEmail(String email);
     Optional<Clinic> findByTenantId(String tenantId);
     boolean existsByEmail(String email);
-
-    String email(String email);
 }

@@ -1,5 +1,6 @@
 package com.clinicai.backend.service;
 
+import com.clinicai.backend.dto.AuthRequest;
 import com.clinicai.backend.dto.AuthResponse;
 import com.clinicai.backend.dto.RegisterRequest;
 import com.clinicai.backend.enums.Plan;
@@ -14,6 +15,7 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -32,7 +34,7 @@ public class AuthService {
     private final JdbcTemplate jdbcTemplate;
 
 
-
+    @Transactional
     public AuthResponse register(RegisterRequest request){
         if(clinicRepository.existsByEmail(request.adminEmail())){
             throw new RuntimeException("Admin already exists");
@@ -48,6 +50,7 @@ public class AuthService {
                 .plan(Plan.STARTER)
                 .status(Status.TRIAL)
                 .trialEndsAt(LocalDateTime.now().plusDays(14))
+                .tenantId(tenantId)
                 .build();
 
         clinicRepository.save(clinic);
@@ -63,13 +66,40 @@ public class AuthService {
                 .password(passwordEncoder.encode(request.adminPassword()))
                 .tenantId(tenantId)
                 .role(Role.ADMIN)
+                .active(true)
                 .build();
+
 
         userRepository.save(admin);
 
 
         String jwtToken = jwtService.generateToken(admin);
 
+
+        return new AuthResponse(
+                clinic.getName(),
+                clinic.getEmail(),
+                clinic.getPhone(),
+                clinic.getStatus().name(),
+                jwtToken
+        );
+    }
+
+    public AuthResponse login(AuthRequest request) {
+        authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(
+                        request.email(),
+                        request.password()
+                )
+        );
+
+        User user = userRepository.findByEmail(request.email())
+                .orElseThrow(() -> new RuntimeException("Usuário não encontrado."));
+
+        Clinic clinic = clinicRepository.findByTenantId(user.getTenantId())
+                .orElseThrow(() -> new RuntimeException("Clínica não encontrada."));
+
+        String jwtToken = jwtService.generateToken(user);
 
         return new AuthResponse(
                 clinic.getName(),
