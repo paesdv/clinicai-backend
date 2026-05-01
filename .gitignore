@@ -72,3 +72,4 @@ Thumbs.db
 
 # Ferramentas pessoais/IA
 .openclaude-profile.jsonapplication.dev.properties
+src/main/resources/application-dev.yaml
