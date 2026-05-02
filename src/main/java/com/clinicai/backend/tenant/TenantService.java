@@ -40,14 +40,14 @@ public class TenantService {
     }
 
     public String generateTenantId(String nome) {
-        // Etapa 1: transformar em slug
+
         String slug = java.text.Normalizer.normalize(nome, java.text.Normalizer.Form.NFD)
                 .replaceAll("\\p{M}", "")
                 .replaceAll("[^a-zA-Z0-9 ]", "")
                 .replace(" ", "_")
                 .toLowerCase();
 
-        // Etapa 2: gerar sufixo aleatório
+
         String alfabeto = "abcdefghijklmnopqrstuvwxyz0123456789";
         java.security.SecureRandom random = new java.security.SecureRandom();
 
@@ -84,15 +84,15 @@ public class TenantService {
     }
 
     public AuthResponse register(RegisterRequest request) {
-        // Passo 1: validar email duplicado
+
         if (clinicRepository.existsByEmail(request.adminEmail())) {
             throw new IllegalArgumentException("Email já cadastrado");
         }
 
-        // Passo 2: gerar tenantId
+
         String tenantId = generateTenantId(request.clinicName());
 
-        // Passo 3: salvar clínica
+
         Clinic clinic = new Clinic();
         clinic.setTenantId(tenantId);
         clinic.setName(request.clinicName());
@@ -105,13 +105,13 @@ public class TenantService {
         clinic.setUpdatedAt(LocalDateTime.now());
         clinicRepository.save(clinic);
 
-        // Passo 4: criar schema
+
         createTenantSchema(tenantId);
 
-        // Passo 5: rodar migrations
+
         runFlywayMigrations(tenantId);
 
-        // Passo 6: criar usuário admin
+
         User admin = new User();
         admin.setName(request.adminName());
         admin.setEmail(request.adminEmail());
@@ -131,11 +131,11 @@ public class TenantService {
 
 
         return new AuthResponse(
-                clinic.getName(),        // clinicName
-                clinic.getEmail(),       // email
-                clinic.getPhone(),       // phone
-                clinic.getStatus().name(), // status (TRIAL, ACTIVE, etc.)
-                token                    // token JWT
+                clinic.getName(),
+                clinic.getEmail(),
+                clinic.getPhone(),
+                clinic.getStatus().name(),
+                token
         );
     }
 }

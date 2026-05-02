@@ -20,9 +20,8 @@ public class OpenApiConfig {
                         .description("API para sistema de clínica com IA")
                         .version("1.0"))
 
-                // 👇 ADICIONE ESTAS DUAS PARTES PARA O BOTÃO "AUTHORIZE" APARECER
                 .security(List.of(
-                        new SecurityRequirement().addList("bearerAuth") // Referencia o esquema abaixo
+                        new SecurityRequirement().addList("bearerAuth")
                 ))
                 .components(new Components()
                         .addSecuritySchemes("bearerAuth",
