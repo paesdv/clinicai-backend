@@ -19,6 +19,7 @@ import java.io.IOException;
 @RequiredArgsConstructor
 public class JwtAuthFilter extends OncePerRequestFilter {
 
+
     private final JwtService jwtService;
     private final UserDetailsServiceImpl userDetailsService;
 
@@ -27,6 +28,18 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                                     HttpServletResponse response,
                                     FilterChain filterChain)
             throws ServletException, IOException {
+
+        String path = request.getRequestURI();
+
+        if (path.startsWith("/api/auth")
+                || path.startsWith("/auth")
+                || path.startsWith("/tenants/register")
+                || path.startsWith("/swagger-ui")
+                || path.startsWith("/api-docs")) {
+
+            filterChain.doFilter(request, response);
+            return;
+        }
 
         final String authHeader = request.getHeader("Authorization");
 
