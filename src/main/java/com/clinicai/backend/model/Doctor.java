@@ -10,13 +10,14 @@ import lombok.Setter;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-@Entity
-@Table(name = "specialty")
+
+@Table(name = "doctor")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class Speciality {
+@Entity
+public class Doctor {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -25,11 +26,19 @@ public class Speciality {
     @Column(nullable = false)
     private String name;
 
-    private String description;
+    @Column(nullable = false, unique = true)
+    private String email;
 
-    private int durationMinutes;
+    private String phone;
+
+    @Column(unique = true)
+    private String crm;
 
     private boolean active = true;
+
+    @ManyToOne
+    @JoinColumn(name = "specialty_id", nullable = false)
+    private Speciality speciality;
 
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -47,4 +56,5 @@ public class Speciality {
     private void preUpdate() {
         updatedAt = LocalDateTime.now();
     }
+
 }

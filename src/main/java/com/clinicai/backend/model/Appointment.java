@@ -1,6 +1,6 @@
 package com.clinicai.backend.model;
 
-
+import com.clinicai.backend.enums.AppointmentStatus;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -11,31 +11,44 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "specialty")
+@Table(name = "appointments")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class Speciality {
+public class Appointment {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
     @Column(nullable = false)
-    private String name;
+    private String patientName;
 
-    private String description;
+    private String patientEmail;
 
-    private int durationMinutes;
+    private String patientPhone;
 
-    private boolean active = true;
+    @Column(columnDefinition = "TEXT")
+    private String notes;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private AppointmentStatus status;
+
+    @Column(unique = true)
+    private String cancellationToken;
+
+    @OneToOne
+    @JoinColumn(name = "slot_id", unique = true)
+    private Slot slot;
 
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
     @Column(nullable = false)
     private LocalDateTime updatedAt;
+
 
     @PrePersist
     private void prePersist() {
