@@ -41,5 +41,22 @@ public class Slot {
     @OneToOne(mappedBy = "slot")
     private Appointment appointment;
 
+    @Column(nullable = false, updatable = false)
+    private LocalDateTime createdAt;
+
+    @Column(nullable = false)
+    private LocalDateTime updatedAt;
+
+    @PrePersist
+    private void prePersist() {
+        createdAt = LocalDateTime.now();
+        updatedAt = LocalDateTime.now();
+    }
+
+    @PreUpdate
+    private void preUpdate() {
+        updatedAt = LocalDateTime.now();
+    }
+
 
 }
