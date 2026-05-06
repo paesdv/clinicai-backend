@@ -23,7 +23,6 @@ public class SlotService {
     private final DoctorRepository doctorRepository;
 
     public List<SlotResponse> listByDoctor(UUID doctorId, LocalDate date){
-
         doctorRepository.findById(doctorId)
                 .orElseThrow(() -> new RuntimeException("Médico não encontrado"));
 
@@ -31,10 +30,9 @@ public class SlotService {
                 .stream()
                 .map(this::toResponse)
                 .toList();
-
     }
 
-    public List<SlotResponse> listAvaible(UUID doctorId, LocalDate date){
+    public List<SlotResponse> listAvailable(UUID doctorId, LocalDate date){
         return slotRepository.findByDoctorIdAndDateAndAvailableTrue(doctorId, date)
                 .stream()
                 .map(this::toResponse)
