@@ -1,6 +1,6 @@
 package com.clinicai.backend.service;
 
-
+import com.clinicai.backend.dto.GenerateSlotsRequest;
 import com.clinicai.backend.dto.SlotRequest;
 import com.clinicai.backend.dto.SlotResponse;
 import com.clinicai.backend.model.Doctor;
@@ -8,10 +8,11 @@ import com.clinicai.backend.model.Slot;
 import com.clinicai.backend.repository.DoctorRepository;
 import com.clinicai.backend.repository.SlotRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.cglib.core.Local;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -22,7 +23,7 @@ public class SlotService {
     private final SlotRepository slotRepository;
     private final DoctorRepository doctorRepository;
 
-    public List<SlotResponse> listByDoctor(UUID doctorId, LocalDate date){
+    public List<SlotResponse> listByDoctor(UUID doctorId, LocalDate date) {
         doctorRepository.findById(doctorId)
                 .orElseThrow(() -> new RuntimeException("Médico não encontrado"));
 
@@ -32,48 +33,84 @@ public class SlotService {
                 .toList();
     }
 
-    public List<SlotResponse> listAvailable(UUID doctorId, LocalDate date){
+    public List<SlotResponse> listAvailable(UUID doctorId, LocalDate date) {
         return slotRepository.findByDoctorIdAndDateAndAvailableTrue(doctorId, date)
                 .stream()
                 .map(this::toResponse)
                 .toList();
     }
 
-    public SlotResponse createSlot(SlotRequest request){
-
+    public SlotResponse create(SlotRequest request) {
         Doctor doctor = doctorRepository.findById(request.doctorId())
                 .orElseThrow(() -> new RuntimeException("Médico não encontrado"));
+
+        validateConflict(request.doctorId(), request.date(), request.startTime(), request.endTime());
+
         Slot slot = new Slot();
         slot.setDoctor(doctor);
         slot.setDate(request.date());
         slot.setStartTime(request.startTime());
         slot.setEndTime(request.endTime());
-
+        slot.setAvailable(true);
         slotRepository.save(slot);
-
         return toResponse(slot);
     }
 
+    public List<SlotResponse> generateSlots(UUID doctorId, GenerateSlotsRequest request) {
+        Doctor doctor = doctorRepository.findById(doctorId)
+                .orElseThrow(() -> new RuntimeException("Médico não encontrado"));
 
-    public void deleteSlot(UUID id){
-        Slot slot = slotRepository.findById(id).orElseThrow(() -> new RuntimeException("Slot não encontrado"));
+        List<Slot> slots = new ArrayList<>();
+        LocalDate currentDate = request.startDate();
+
+        while (!currentDate.isAfter(request.endDate())) {
+            LocalTime currentTime = request.startTime();
+
+            while (currentTime.isBefore(request.endTime())) {
+                LocalTime slotEnd = currentTime.plusMinutes(request.intervalMinutes());
+
+                if (!slotEnd.isAfter(request.endTime())) {
+                    if (!hasConflict(doctorId, currentDate, currentTime, slotEnd)) {
+                        Slot slot = new Slot();
+                        slot.setDoctor(doctor);
+                        slot.setDate(currentDate);
+                        slot.setStartTime(currentTime);
+                        slot.setEndTime(slotEnd);
+                        slot.setAvailable(true);
+                        slots.add(slot);
+                    }
+                }
+                currentTime = slotEnd;
+            }
+            currentDate = currentDate.plusDays(1);
+        }
+
+        slotRepository.saveAll(slots);
+        return slots.stream().map(this::toResponse).toList();
+    }
+
+    public void delete(UUID id) {
+        Slot slot = slotRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Slot não encontrado"));
         slotRepository.delete(slot);
     }
 
+    private void validateConflict(UUID doctorId, LocalDate date, LocalTime startTime, LocalTime endTime) {
+        List<Slot> conflicts = slotRepository.findConflicting(doctorId, date, startTime, endTime);
+        if (!conflicts.isEmpty()) {
+            throw new RuntimeException("Já existe um slot neste horário para este médico");
+        }
+    }
 
-
+    private boolean hasConflict(UUID doctorId, LocalDate date, LocalTime startTime, LocalTime endTime) {
+        return !slotRepository.findConflicting(doctorId, date, startTime, endTime).isEmpty();
+    }
 
     private SlotResponse toResponse(Slot s) {
         return new SlotResponse(
-                s.getId(),
-                s.getDate(),
-                s.getStartTime(),
-                s.getEndTime(),
-                s.isAvailable(),
-                s.getDoctor().getId(),
-                s.getDoctor().getName(),
+                s.getId(), s.getDate(), s.getStartTime(), s.getEndTime(),
+                s.isAvailable(), s.getDoctor().getId(), s.getDoctor().getName(),
                 s.getCreatedAt()
         );
     }
-
 }
