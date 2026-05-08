@@ -11,6 +11,7 @@ import com.clinicai.backend.model.User;
 import com.clinicai.backend.repository.ClinicRepository;
 import com.clinicai.backend.repository.UserRepository;
 import com.clinicai.backend.security.JwtService;
+import com.clinicai.backend.tenant.TenantContext;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -86,28 +87,36 @@ public class AuthService {
     }
 
     public AuthResponse login(AuthRequest request) {
-        authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                        request.email(),
-                        request.password()
-                )
-        );
-
-        User user = userRepository.findByEmail(request.email())
-                .orElseThrow(() -> new RuntimeException("Usuário não encontrado."));
-
-        Clinic clinic = clinicRepository.findByTenantId(user.getTenantId())
+        // Busca a clínica no schema public pelo email para saber o tenant
+        Clinic clinic = clinicRepository.findByEmail(request.email())
                 .orElseThrow(() -> new RuntimeException("Clínica não encontrada."));
 
-        String jwtToken = jwtService.generateToken(user);
+        // Seta o tenant ANTES de autenticar (o loadUserByUsername vai precisar)
+        TenantContext.setCurrentTenant(clinic.getTenantId());
 
-        return new AuthResponse(
-                clinic.getName(),
-                clinic.getEmail(),
-                clinic.getPhone(),
-                clinic.getStatus().name(),
-                jwtToken
-        );
+        try {
+            authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(
+                            request.email(),
+                            request.password()
+                    )
+            );
+
+            User user = userRepository.findByEmail(request.email())
+                    .orElseThrow(() -> new RuntimeException("Usuário não encontrado."));
+
+            String jwtToken = jwtService.generateToken(user);
+
+            return new AuthResponse(
+                    clinic.getName(),
+                    clinic.getEmail(),
+                    clinic.getPhone(),
+                    clinic.getStatus().name(),
+                    jwtToken
+            );
+        } finally {
+            TenantContext.clear();
+        }
     }
 
 }
