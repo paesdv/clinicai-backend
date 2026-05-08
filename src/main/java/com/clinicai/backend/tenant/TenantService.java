@@ -8,45 +8,41 @@ import com.clinicai.backend.enums.Status;
 import com.clinicai.backend.model.Clinic;
 import com.clinicai.backend.model.User;
 import com.clinicai.backend.repository.ClinicRepository;
-import com.clinicai.backend.repository.UserRepository;
 import com.clinicai.backend.security.JwtService;
 import org.flywaydb.core.Flyway;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import java.security.SecureRandom;
 import java.time.LocalDateTime;
 
 @Service
 public class TenantService {
 
     private final ClinicRepository clinicRepository;
-    private final UserRepository userRepository;
     private final JdbcTemplate jdbcTemplate;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+    private final TenantUserCreator tenantUserCreator;
 
     public TenantService(JwtService jwtService,
                          PasswordEncoder passwordEncoder,
                          JdbcTemplate jdbcTemplate,
                          ClinicRepository clinicRepository,
-                         UserRepository userRepository) {
+                         TenantUserCreator tenantUserCreator) {
         this.jwtService = jwtService;
         this.passwordEncoder = passwordEncoder;
         this.jdbcTemplate = jdbcTemplate;
         this.clinicRepository = clinicRepository;
-        this.userRepository = userRepository;
+        this.tenantUserCreator = tenantUserCreator;
     }
 
     public String generateTenantId(String nome) {
-
         String slug = java.text.Normalizer.normalize(nome, java.text.Normalizer.Form.NFD)
                 .replaceAll("\\p{M}", "")
                 .replaceAll("[^a-zA-Z0-9 ]", "")
                 .replace(" ", "_")
                 .toLowerCase();
-
 
         String alfabeto = "abcdefghijklmnopqrstuvwxyz0123456789";
         java.security.SecureRandom random = new java.security.SecureRandom();
@@ -84,14 +80,11 @@ public class TenantService {
     }
 
     public AuthResponse register(RegisterRequest request) {
-
         if (clinicRepository.existsByEmail(request.adminEmail())) {
             throw new IllegalArgumentException("Email já cadastrado");
         }
 
-
         String tenantId = generateTenantId(request.clinicName());
-
 
         Clinic clinic = new Clinic();
         clinic.setTenantId(tenantId);
@@ -105,12 +98,8 @@ public class TenantService {
         clinic.setUpdatedAt(LocalDateTime.now());
         clinicRepository.save(clinic);
 
-
         createTenantSchema(tenantId);
-
-
         runFlywayMigrations(tenantId);
-
 
         User admin = new User();
         admin.setName(request.adminName());
@@ -119,16 +108,16 @@ public class TenantService {
         admin.setTenantId(tenantId);
         admin.setRole(Role.ADMIN);
         admin.setActive(true);
-        admin.setCreatedAt(LocalDateTime.now());
-        admin.setUpdatedAt(LocalDateTime.now());
 
+        // Seta ANTES de entrar na transação — o ConnectionProvider lê isso ao abrir conexão
         TenantContext.setCurrentTenant(tenantId);
-        userRepository.save(admin);
-        TenantContext.clear();
-
+        try {
+            tenantUserCreator.saveUser(admin);
+        } finally {
+            TenantContext.clear();
+        }
 
         String token = jwtService.generateToken(admin);
-
 
         return new AuthResponse(
                 clinic.getName(),
