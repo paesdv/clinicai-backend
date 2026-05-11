@@ -12,6 +12,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.UUID;
 
@@ -21,6 +22,8 @@ import java.util.UUID;
 public class SlotController {
 
     private final SlotService slotService;
+
+    private static final int MAX_RANGE_DAYS = 90;
 
     @GetMapping("/doctor/{doctorId}")
     public ResponseEntity<List<SlotResponse>> listByDoctor(
@@ -45,7 +48,14 @@ public class SlotController {
     public ResponseEntity<List<SlotResponse>> generateSlots(
             @PathVariable UUID doctorId,
             @Valid @RequestBody GenerateSlotsRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(slotService.generateSlots(doctorId, request));
+
+        long rangeDays = ChronoUnit.DAYS.between(request.startDate(), request.endDate());
+        if (rangeDays > MAX_RANGE_DAYS) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(slotService.generateSlots(doctorId, request));
     }
 
     @DeleteMapping("/{id}")

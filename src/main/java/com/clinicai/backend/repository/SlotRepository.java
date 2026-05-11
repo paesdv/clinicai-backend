@@ -16,6 +16,7 @@ public interface SlotRepository extends JpaRepository<Slot, UUID> {
     List<Slot> findByDoctorIdAndDate(UUID doctorId, LocalDate date);
     List<Slot> findByDoctorIdAndDateAndAvailableTrue(UUID doctorId, LocalDate date);
     Optional<Slot> findByIdAndAvailableTrue(UUID id);
+    List<Slot> findByDoctorIdAndDateBetween(UUID doctorId, LocalDate startDate, LocalDate endDate);
 
     @Query("SELECT s FROM Slot s WHERE s.doctor.id = :doctorId AND s.date = :date " +
             "AND s.startTime < :endTime AND s.endTime > :startTime")

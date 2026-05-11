@@ -14,7 +14,9 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -60,6 +62,13 @@ public class SlotService {
         Doctor doctor = doctorRepository.findById(doctorId)
                 .orElseThrow(() -> new RuntimeException("Médico não encontrado"));
 
+        // Busca todos os slots existentes do período de uma única vez
+        Set<String> existingKeys = slotRepository
+                .findByDoctorIdAndDateBetween(doctorId, request.startDate(), request.endDate())
+                .stream()
+                .map(s -> s.getDate() + "_" + s.getStartTime())
+                .collect(Collectors.toSet());
+
         List<Slot> slots = new ArrayList<>();
         LocalDate currentDate = request.startDate();
 
@@ -70,7 +79,8 @@ public class SlotService {
                 LocalTime slotEnd = currentTime.plusMinutes(request.intervalMinutes());
 
                 if (!slotEnd.isAfter(request.endTime())) {
-                    if (!hasConflict(doctorId, currentDate, currentTime, slotEnd)) {
+                    String key = currentDate + "_" + currentTime;
+                    if (!existingKeys.contains(key)) {
                         Slot slot = new Slot();
                         slot.setDoctor(doctor);
                         slot.setDate(currentDate);
@@ -100,10 +110,6 @@ public class SlotService {
         if (!conflicts.isEmpty()) {
             throw new RuntimeException("Já existe um slot neste horário para este médico");
         }
-    }
-
-    private boolean hasConflict(UUID doctorId, LocalDate date, LocalTime startTime, LocalTime endTime) {
-        return !slotRepository.findConflicting(doctorId, date, startTime, endTime).isEmpty();
     }
 
     private SlotResponse toResponse(Slot s) {
